@@ -16,41 +16,16 @@
 import UIKit
 
 class ViewController: UIViewController {
-    @IBOutlet weak var tableView: UITableView!
+    @IBOutlet private weak var tableView: UITableView!
     
-    let viewModel: ViewModel = ViewModel()
-    let viewModel2: ViewModel2 = ViewModel2()
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        bind()
-    }
-
-    func bind() {
+    private let viewModel: ViewModel = ViewModel() //bind 한거
+    private let viewModel2: ViewModel2 = ViewModel2() //bind 안한거
+    
+    @IBAction private func requestButton(_ sender: UIBarButtonItem) {
         /*:
-         클로저를 동작하게 하는 장치는 -> viewModel.requestPerson
-         어디서든 viewModel.requestPerson 를 호출하면 클로저가 동작함.
+         이놈에 의해서 viewModel.jaeeun의 observer 가 동작함
          */
-        viewModel.subscribe(to: viewModel.jaeeun) { _ in
-            DispatchQueue.main.async {
-                self.tableView.reloadData()
-            }
-        }
-    }
-    
-    func showAlert(error: APIError) {
-        DispatchQueue.main.async {
-            let alert = UIAlertController(title: "Error", message: error.localizedDescription, preferredStyle: .alert)
-            let action = UIAlertAction(title: "확인", style: .cancel, handler: nil)
-            alert.addAction(action)
-            self.present(alert, animated: true, completion: nil)
-        }
-    }
-    
-    @IBAction func requestButton(_ sender: UIBarButtonItem) {
-        viewModel.requestPerson { error in
-            self.showAlert(error: error)
-        }
+        viewModel.requestPerson()
         
         /*:
          이놈은 항상 viewModel2.requestPerson 이걸 호출해야 함.
@@ -60,23 +35,50 @@ class ViewController: UIViewController {
             case .success:
                 self.tableView.reloadData()
             case .failure(let error):
-                print("error = \(error)")
+                self.showAlert(error: error)
             }
+        }
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        bind()
+    }
+
+    private func bind() {
+        viewModel.subscribe(to: viewModel.jaeeun) { _ in
+            DispatchQueue.main.async {
+                self.tableView.reloadData()
+            }
+        }
+        
+        viewModel.errorEvent = { error in
+            self.showAlert(error: error)
+        }
+    }
+    
+    private func showAlert(error: APIError) {
+        DispatchQueue.main.async {
+            guard self.presentedViewController == nil else { return }
+            let alert = UIAlertController(title: "Error", message: error.localizedDescription, preferredStyle: .alert)
+            let action = UIAlertAction(title: "확인", style: .cancel, handler: nil)
+            alert.addAction(action)
+            self.present(alert, animated: true, completion: nil)
         }
     }
 }
 
 extension ViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return viewModel.jaeeun.event?.count ?? .zero
-//        return viewModel2.jaeeun.count
+        return viewModel.output(model: viewModel.jaeeun)?.count ?? .zero
+//        let model = viewModel2.jaeeun.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
-        let person = viewModel.jaeeun.event?[indexPath.row]
-//        let person = viewModel2.jaeeun[indexPath.row]
-        cell.textLabel?.text = person?.name
+        let model = viewModel.output(model: viewModel.jaeeun)?[indexPath.row]
+//        let model = viewModel2.jaeeun[indexPath.row]
+        cell.textLabel?.text = model?.name
         return cell
     }
 }

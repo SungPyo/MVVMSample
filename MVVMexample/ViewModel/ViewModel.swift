@@ -10,14 +10,15 @@ import Foundation
 class ViewModel: MVVMType {
     private(set) var jaeeun: Observable<[Model.MVVM.Person]> = Observable()
     
-    func requestPerson(handler: ((APIError) -> ())?) {
+    func requestPerson() {
         NetworkManager.shared.requestPerson { [weak self] result in
             guard let self = self else { return }
             switch result {
             case .success(let model):
                 self.input(model: self.jaeeun, input: model)
             case .failure(let error):
-                handler?(error)
+                guard let errorEvent = self.errorEvent else { return }
+                errorEvent(error)
             }
         }
     }

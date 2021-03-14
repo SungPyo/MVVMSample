@@ -8,11 +8,11 @@
 import Foundation
 
 class Observable<T> {
-    typealias Completion = (T) -> ()
+    typealias Observer = (T) -> ()
     
-    private var observers: [Completion] = []
+    private var observers: [Observer] = []
     
-    var event: T? {
+    fileprivate var event: T? {
         didSet {
             observers.forEach { observer in
                 guard let event = event else { return }
@@ -20,8 +20,8 @@ class Observable<T> {
             }
         }
     }
-    
-    fileprivate func subscribe(observer: @escaping Completion) {
+
+    fileprivate func subscribe(observer: @escaping Observer) {
         observers.append(observer)
         guard let value = event else { return }
         observer(value)
@@ -29,6 +29,9 @@ class Observable<T> {
 }
 
 class MVVMType: Observable<Any> {
+    typealias ErrorHandler = (APIError) -> ()
+    
+    var errorEvent: ErrorHandler? = nil
     
     func output<T>(model: Observable<T>) -> T? {
         return model.event
